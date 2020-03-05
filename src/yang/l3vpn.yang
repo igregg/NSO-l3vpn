@@ -12,38 +12,278 @@ module l3vpn {
   import tailf-ncs {
     prefix ncs;
   }
+  import tailf-ned-cisco-ios {
+	  prefix ios;
+  }
+  import tailf-ned-cisco-ios-xr {
+    prefix xr;
+  }
 
   description
-    "Bla bla...";
+    "Use for TOT NSO L3VPN Provisioning";
 
-  revision 2016-01-01 {
+  revision 2020-02-17 {
     description
       "Initial revision.";
   }
 
-  list l3vpn {
-    description "This is an RFS skeleton service";
+  container l3vpn {
+    list l3vpn-pwhe {
 
-    key name;
-    leaf name {
-      tailf:info "Unique service id";
-      tailf:cli-allow-range;
-      type string;
-    }
-
-    uses ncs:service-data;
-    ncs:servicepoint l3vpn-servicepoint;
-
-    // may replace this with other ways of refering to the devices.
-    leaf-list device {
-      type leafref {
-        path "/ncs:devices/ncs:device/ncs:name";
+      key "name";
+      leaf name {
+        tailf:info "Unique service id";
+        tailf:cli-allow-range;
+        type string;
       }
-    }
 
-    // replace with your own stuff here
-    leaf dummy {
-      type inet:ipv4-address;
-    }
+      uses ncs:service-data;
+      ncs:servicepoint l3vpn-servicepoint;
+
+      container pe {
+        leaf name {
+          tailf:info "PE Router";
+          type leafref {
+            path "/ncs:devices/ncs:device/ncs:name";
+          }
+          mandatory true;
+        }
+
+        leaf vrf {
+          type string
+          mandatory true;
+        }
+
+        leaf rd {
+          tailf:info "default prefix is 9737:x enter only suffix";
+          type uint32;
+          mandatory true;
+        }
+
+        leaf max-prefix {
+          tailf:info "Maximum number of BGP prefixes allowed";
+          type enumeration {
+            enum 100;
+            enum 500;
+            enum 1000;
+            enum 10000;
+            enum 20000;
+          }
+        }
+
+        container interface {
+          tailf:info "Customer interface";
+          leaf bvi {
+            type uint32 {
+              range 1..40000;
+            }
+            mandatory true;
+          }
+
+          leaf bandwidth {
+            tailf:info "Enter number in KiloByte ex: 1000 (equal to 1MB)";
+            type uint32;
+          }
+
+          leaf ip-address {
+            tailf:info "Customer IP address";
+            type inet:ipv4-address;
+            mandatory true;
+          }
+
+          leaf netmask {
+            tailf:info "Customer Netmask ex: 255.255.255.0";
+            type string;
+            mandatory true;
+          }
+
+          leaf description {
+            type string;
+          }
+
+          leaf policy-in {
+            type leafref {
+              path "/ncs:devices/ncs:device[ncs:name=current()/../../device]/ncs:config/xr:policy-map/xr:name";
+            }
+          }
+
+          leaf policy-out {
+            type leafref {
+              path "/ncs:devices/ncs:device[ncs:name=current()/../../device]/ncs:config/xr:policy-map/xr:name";
+            }
+          }
+        }
+
+        leaf routing-protocol {
+          tailf:info "Routing option for the PE-CE link";
+          type enumeration {
+            enum "bgp";
+            enum "static";
+            enum "none";
+          }
+        }
+
+        container bgp {
+          when "../routing-protocol = 'bgp'";
+          leaf customer-as {
+            tailf:info "Customer BGP AS number (range 1 - 65534)";
+            type uint32;
+            mandatory true;
+          }
+        }
+
+        container static {
+          when "../routing-protocol = 'static'";
+          list statics {
+            key "prefix";
+            leaf prefix {
+              type string;
+            }
+            leaf next-hop {
+              type inet:ipv4-address;
+            }
+          }
+        }
+      }
+
+      typedef l2-serv-encap-type {
+        type enumeration {
+          enum untagged;
+          enum dot1q;
+        }
+      }
+
+      typedef l2-serv-rewrite {
+        type enumeration {
+          enum pop1 {
+            value 1;
+            description "Pop 1 tag";
+          } 
+          enum translate1to1 {
+            value 5;
+            description "Translate 1-to-1"; 
+          }
+        }
+      }
+
+      container l2vpn {
+        tailf:info "Psudowire connect to local PE";
+        leaf vcid {
+          type uint32 {
+            range "1..2147483647";
+          }
+          mandatory true;
+        }
+
+        list endpoint {
+          key name;
+
+          leaf name {
+            tailf:info "LPE or APE Router connected to customer.";
+            type leafref {
+              path "/ncs:devices/ncs:device/ncs:name";
+            }
+            mandatory true;
+          }
+
+          container interface-ios {
+            when "/ncs:devices/ncs:device[ncs:name=current()/../device]/ncs:capability/ncs:uri='urn:ios'";
+            choice interface-type {
+              case gig {
+                leaf GigabitEthernet {
+                  type leafref {
+                  path "/ncs:devices/ncs:device[ncs:name=current()/../../device]/ncs:config/ios:interface/ios:GigabitEthernet/ios:name";
+                  }
+                }
+              }
+              case ten-gig {
+                leaf TenGigabitEthernet {
+                  type leafref {
+                    path "/ncs:devices/ncs:device[ncs:name=current()/../../device]/ncs:config/ios:interface/ios:TenGigabitEthernet/ios:name";
+                  }
+                }
+              }
+            }
+          }
+
+          container interface-ios-xr {
+            when "/ncs:devices/ncs:device[ncs:name=current()/../device]/ncs:capability/ncs:uri='http://tail-f.com/ned/cisco-ios-xr'";
+
+            choice interface-type {
+              case gig {
+                leaf GigabitEthernet {
+                  type leafref {
+                    path "/ncs:devices/ncs:device[ncs:name=current()/../../device]/ncs:config/xr:interface/xr:GigabitEthernet/xr:id";
+                  }
+                }
+              }
+
+              case ten-gig {
+                leaf TenGigE {
+                  type leafref {
+                    path "/ncs:devices/ncs:device[ncs:name=current()/../../device]/ncs:config/xr:interface/xr:TenGigE/xr:id";
+                  }
+                }
+              }
+            }
+          }
+
+          leaf instance-id {
+            type int32 {
+              range "1..4000";
+            }
+            mandatory true;
+          }
+
+          leaf description {
+            type string;
+          }
+
+          leaf encapsulation {
+            type l2-serv-encap-type;
+          }
+
+          container rewrite {
+            container ingress {
+              leaf tag {
+                type l2-serv-rewrite;
+              }
+              container dot1q {
+                when "../tag = 'translate1to1'";
+                leaf vlan-id {
+                  type int32 {
+                    range "1..4000";
+                  }
+                }
+              }
+            }
+          }
+
+          leaf policy-out {
+            type string;
+          }
+
+          leaf policy-in {
+            type string;
+          }
+
+          leaf vlan-id {
+            when "../encapsulation = 'dot1q'";
+            type int32 {
+              range "1..4000";
+            }
+          }
+
+          leaf mtu {
+            tailf:info "Default is 1500 (IOS-XR default is 1522)";
+            type uint16 {
+              range "1500..9000";
+            }
+            default 1500;
+          }
+
+        }
+      }
+    }  
   }
 }

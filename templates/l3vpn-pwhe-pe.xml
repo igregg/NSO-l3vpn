@@ -1,0 +1,104 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0">
+  <devices xmlns="http://tail-f.com/ns/ncs">
+    <device>
+      <name>{$PE}</name>
+      <config>
+        <vrf xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <vrf-list>
+            <name>{$VRF}</name>
+            <address-family>
+              <ipv4>
+                <unicast>
+                  <import>
+                    <route-target>
+                      <address-list>
+                        <name>9737:{$RD}</name>
+                      </address-list>
+                    </route-target>
+                  </import>
+                  <export>
+                    <route-target>
+                      <address-list>
+                        <name>9737:{$RD}</name>
+                      </address-list>
+                    </route-target>
+                  </export>
+                  <maximum when="{ $MAX_PREFIX != 'None' }">
+                    <prefix>
+                      <limit>{$MAX_PREFIX}</limit>
+                    </prefix>
+                  </maximum>
+                </unicast>
+              </ipv4>
+            </address-family>
+          </vrf-list>
+        </vrf>
+
+        <interface xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <BVI>
+          <id>{$BVI_NUM}</id>
+          <description when="{ $DESCRIPTION != 'None' }">{$DESCRIPTION}</description>
+          <bandwidth when="{ $BW != 'None' }">{$BW}</bandwidth>
+          <service-policy>
+            <input when="{ $BVI_POLICY_IN != 'None' }">
+             <name>{$BVI_POLICY_IN}</name>
+            </input>
+            <output when="{ $BVI_POLICY_OUT != 'None' }">
+             <name>{$BVI_POLICY_OUT}</name>
+            </output>
+          </service-policy>
+          <vrf>{$VRF}</vrf>
+          <ipv4>
+            <address>
+            <ip>{$IP}</ip>
+            <mask>{$NETMASK}</mask>
+            </address>
+          </ipv4>
+          <proxy-arp/>
+          </BVI>
+        </interface>
+        
+        <router xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <static when="{ $ROUTING = 'static' }">
+            <vrf>
+              <name>{$VRF}</name>
+              <address-family>
+              <ipv4>
+                <unicast>
+                <routes>
+                  <net>{$PREFIX}</net>
+                  <interface>BVI{$BVI_NUM}</interface>
+                  <address>{$NEXTHOP}</address>
+                </routes>
+                </unicast>
+              </ipv4>
+              </address-family>
+            </vrf>
+            </static>
+            <bgp>
+              <bgp-no-instance>
+                <id>9737</id>
+                <vrf>
+                  <name>{$VRF}</name>
+                  <rd>9737:{$RD}</rd>
+                  <label>
+                    <mode>per-vrf</mode>
+                  </label>
+                  <address-family>
+                  <ipv4>
+                    <unicast>
+                      <redistribute>
+                        <connected/>
+                        <static when="{ $ROUTING = 'static' }"/>
+                      </redistribute>
+                    </unicast>
+                  </ipv4>
+                </address-family>
+              </vrf>
+            </bgp-no-instance>
+          </bgp>
+        </router>
+      </config>
+    </device>
+  </devices>
+</config-template>

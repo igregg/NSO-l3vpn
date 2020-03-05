@@ -1,0 +1,200 @@
+<config-template xmlns="http://tail-f.com/ns/config/1.0">
+  <devices xmlns="http://tail-f.com/ns/ncs">
+    <device>
+      <name>{$PE}</name>
+      <config>
+        <l2vpn xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <bridge>
+          <group>
+            <group-name>{$VRF}</group-name>
+            <bridge-domain>
+            <bridge-domain-name>{$VRF}_{$BVI_NUM}</bridge-domain-name>
+<!--            <neighbor>-->
+<!--              <address>{$REMOTE_LB}</address>-->
+<!--              <pw-id>{$VC_ID}</pw-id>-->
+<!--              <pw-class>EO_CON</pw-class>-->
+<!--              <storm-control>-->
+<!--              <broadcast>-->
+<!--                <pps>2000</pps>-->
+<!--              </broadcast>-->
+<!--              <multicast>-->
+<!--                <pps>2000</pps>-->
+<!--              </multicast>-->
+<!--              </storm-control>-->
+<!--            </neighbor>-->
+            <routed>
+              <interface>
+              <name>BVI{$BVI_NUM}</name>
+              </interface>
+            </routed>
+            </bridge-domain>
+          </group>
+          </bridge>
+        </l2vpn>
+      </config>
+    </device>
+    <device>
+      <name>{$LPE}</name>
+      <config>
+        <interface xmlns="urn:ios">
+          <GigabitEthernet when ="{ $INTERFACE_TYPE = 'GigabitEthernet' }" tags="merge">
+            <name>{$INTERFACE_NUM}</name>
+            <service>
+              <instance>
+                <id>{$INST_ID}</id>
+                <ethernet/>
+                <description>{$DESCRIPTION}</description>
+                <encapsulation>
+                  <untagged when ="{ $ENCAPSULATION = 'untagged' }"/>
+                  <dot1q when ="{ $ENCAPSULATION = 'dot1q' }">
+                    <id>{$VLAN}</id>
+                  </dot1q>
+                </encapsulation>
+                <rewrite when ="{ $ENCAPSULATION = 'dot1q' }">
+                  <ingress>
+                    <tag>
+                      <pop>1</pop>
+                      <mode>symmetric</mode>
+                    </tag>
+                  </ingress>
+                </rewrite>
+                <xconnect>
+                  <address>{$PE_LB}</address>
+                  <vcid>{$VC_ID}</vcid>
+                  <encapsulation>mpls</encapsulation>
+                  <mtu>{$MTU}</mtu>
+                </xconnect>
+                <service-policy>
+                 <input when="{ $POLICY_IN != 'None' }">
+                   <name>{$POLICY_IN}</name>
+                 </input>
+                 <output when="{ $POLICY_OUT != 'None' }">
+                   <name>{$POLICY_OUT}</name>
+                 </output>
+               </service-policy>
+              </instance>
+            </service>
+          </GigabitEthernet>
+          <TenGigabitEthernet when ="{ $INTERFACE_TYPE = 'TenGigabitEthernet' }" tags="merge">
+            <name>{$INTERFACE_NUM}</name>
+            <service>
+              <instance>
+                <id>{$INST_ID}</id>
+                <ethernet/>
+                <description>{$DESCRIPTION}</description>
+                <encapsulation>
+                  <untagged when ="{ $ENCAPSULATION = 'untagged' }"/>
+                  <dot1q when ="{ $ENCAPSULATION = 'dot1q' }">
+                    <id>{$VLAN}</id>
+                  </dot1q>
+                </encapsulation>
+                <rewrite when ="{ $ENCAPSULATION = 'dot1q' }">
+                  <ingress>
+                    <tag>
+                      <pop>1</pop>
+                      <mode>symmetric</mode>
+                    </tag>
+                  </ingress>
+                </rewrite>
+                <xconnect>
+                  <address>{$PE_LB}</address>
+                  <vcid>{$VC_ID}</vcid>
+                  <encapsulation>mpls</encapsulation>
+                  <mtu>{$MTU}</mtu>
+                </xconnect>
+                <service-policy>
+                 <input when="{ $POLICY_IN != 'None' }">
+                   <name>{$POLICY_IN}</name>
+                 </input>
+                 <output when="{ $POLICY_OUT != 'None' }">
+                   <name>{$POLICY_OUT}</name>
+                 </output>
+               </service-policy>
+              </instance>
+            </service>
+          </TenGigabitEthernet>
+        </interface>
+
+        <interface xmlns="http://tail-f.com/ned/cisco-ios-xr" tags="merge">
+          <GigabitEthernet-subinterface when ="{ $INTERFACE_TYPE = 'GigabitEthernet' }">
+          <GigabitEthernet>
+            <id>{$INTERFACE_NUM}.{$INST_ID}</id>
+            <mode>l2transport</mode>
+            <description>{$DESCRIPTION}</description>
+            <mtu>{$MTU+22}</mtu>
+            <encapsulation>
+              <dot1q when="{ $ENCAPSULATION = 'dot1q' }">
+                <vlan-id>{$VLAN}</vlan-id>
+              </dot1q>
+            </encapsulation>
+            <rewrite when="{ $ENCAPSULATION = 'dot1q' }">
+              <ingress>
+                <tag>
+                  <pop>1</pop>
+                  <mode>symmetric</mode>
+                </tag>
+              </ingress>
+            </rewrite>
+            <service-policy>
+             <input when="{ $POLICY_IN != 'None' }">
+               <name>{$POLICY_IN}</name>
+             </input>
+             <output when="{ $POLICY_OUT != 'None' }">
+               <name>{$POLICY_OUT}</name>
+             </output>
+           </service-policy>
+          </GigabitEthernet>
+          </GigabitEthernet-subinterface>
+
+          <TenGigE-subinterface when ="{ $INTERFACE_TYPE = 'TenGigE' }">
+          <TenGigE>
+            <id>{$INTERFACE_NUM}.{$INST_ID}</id>
+            <mode>l2transport</mode>
+            <description>{$DESCRIPTION}</description>
+            <mtu>{$MTU+22}</mtu>
+            <encapsulation>
+              <dot1q when="{ $ENCAPSULATION = 'dot1q' }">
+                <vlan-id>{$VLAN}</vlan-id>
+              </dot1q>
+            </encapsulation>
+            <rewrite when="{ $ENCAPSULATION = 'dot1q' }">
+              <ingress>
+                <tag>
+                  <pop>1</pop>
+                  <mode>symmetric</mode>
+                </tag>
+              </ingress>
+            </rewrite>
+            <service-policy>
+             <input when="{ $POLICY_IN != 'None' }">
+               <name>{$POLICY_IN}</name>
+             </input>
+             <output when="{ $POLICY_OUT != 'None' }">
+               <name>{$POLICY_OUT}</name>
+             </output>
+           </service-policy>
+          </TenGigE>
+          </TenGigE-subinterface>
+        </interface>
+
+        <l2vpn xmlns="http://tail-f.com/ned/cisco-ios-xr">
+          <xconnect>
+            <group>
+              <name>{$VRF}</name>
+              <p2p>
+                <name>{$VRF}_{$BVI_NUM}</name>
+                <interface>
+                  <name>{$INTERFACE_TYPE}{$INTERFACE_NUM}.{$INST_ID}</name>
+                </interface>
+                <neighbor>
+                  <address>{$PE_LB}</address>
+                  <pw-id>{$VC_ID}</pw-id>
+                </neighbor>
+              </p2p>
+            </group>
+          </xconnect>
+        </l2vpn>
+      </config>
+    </device>
+  </devices>
+</config-template>
